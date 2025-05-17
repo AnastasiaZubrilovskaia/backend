@@ -82,21 +82,24 @@ const TEST_DATA = {
       description: 'Beautiful red rose',
       price: 100.99,
       category: 'roses',
-      stock: 50
+      stock: 50,
+      isDeleted: false
     },
     {
       name: 'White Tulip',
       description: 'Elegant white tulip',
       price: 50.00,
       category: 'tulips',
-      stock: 100
+      stock: 100,
+      isDeleted: false
     },
     {
       name: 'Sunflower',
       description: 'Bright yellow sunflower',
       price: 300.50,
       category: 'seasonal',
-      stock: 30
+      stock: 30,
+      isDeleted: false
     }
   ]
 };
@@ -110,6 +113,39 @@ async function startServer() {
       useUnifiedTopology: true
     });
     console.log('MongoDB connected successfully');
+
+    // Проверяем подключение к базе данных
+    const dbState = mongoose.connection.readyState;
+    console.log('Database connection state:', dbState);
+    
+    // Проверяем количество цветов в базе
+    const flowerCount = await Flower.countDocuments();
+    console.log('Current flower count in database:', flowerCount);
+
+    // Если цветов нет, создаем тестовые данные
+    if (flowerCount === 0) {
+      console.log('Creating initial test data...');
+      try {
+        // Создаем тестовых пользователей
+        for (const userData of TEST_DATA.users) {
+          const existingUser = await User.findOne({ email: userData.email });
+          if (!existingUser) {
+            const salt = await bcrypt.genSalt(10);
+            const passwordHash = await bcrypt.hash(userData.password, salt);
+            await User.create({
+              ...userData,
+              passwordHash
+            });
+          }
+        }
+
+        // Создаем тестовые цветы
+        await Flower.insertMany(TEST_DATA.flowers);
+        console.log('Test data created successfully');
+      } catch (error) {
+        console.error('Error creating test data:', error);
+      }
+    }
 
     // Запуск сервера
     const PORT = process.env.PORT || 5000;
